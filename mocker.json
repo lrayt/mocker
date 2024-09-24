@@ -1,0 +1,12 @@
+{
+  "router": {
+    "/assets": {
+      "type": "fs",
+      "dir": "${WorkDir}/assets"
+    },
+    "/baidu": {
+      "type": "proxy",
+      "target": "${WorkDir}/assets"
+    }
+  }
+}

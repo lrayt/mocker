@@ -6,7 +6,7 @@
     },
     "/baidu": {
       "type": "proxy",
-      "target": "${WorkDir}/assets"
+      "target": "https://www.baidu.com"
     }
   }
 }

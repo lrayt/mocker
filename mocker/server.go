@@ -8,6 +8,8 @@ import (
 	"github.com/tidwall/gjson"
 	"io"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,11 +63,26 @@ func (s MServer) fileHandler(router string, value gjson.Result) error {
 	return nil
 }
 
-func (s MServer) apiServer(value gjson.Result) error {
+func (s MServer) proxyHandler(router string, value gjson.Result) error {
+	remote, err := url.Parse(value.Get("target").String())
+	if err != nil {
+		return err
+	}
+	s.r.Any(router, func(c *gin.Context) {
+		proxy := httputil.NewSingleHostReverseProxy(remote)
+		proxy.Director = func(req *http.Request) {
+			req.Header = c.Request.Header
+			req.Host = remote.Host
+			req.URL.Scheme = remote.Scheme
+			req.URL.Host = remote.Host
+			req.URL.Path = remote.Path
+		}
+		proxy.ServeHTTP(c.Writer, c.Request)
+	})
 	return nil
 }
 
-func (s MServer) apiGroupServer(value gjson.Result) error {
+func (s MServer) apiHandler(value gjson.Result) error {
 	return nil
 }
 
@@ -73,7 +90,7 @@ func (s MServer) crudHandler(value gjson.Result) error {
 	return nil
 }
 
-func (s MServer) proxyServer(value gjson.Result) error {
+func (s MServer) apiGroupHandler(value gjson.Result) error {
 	return nil
 }
 
@@ -83,14 +100,14 @@ func (s MServer) Setup() (err error) {
 		switch RouterType(rType) {
 		case RouterTypeFS:
 			err = s.fileHandler(key.String(), value)
+		case RouterTypeProxy:
+			err = s.proxyHandler(key.String(), value)
 		case RouterTypeCrud:
 			err = s.crudHandler(value)
 		case RouterTypeAPI:
-			err = s.apiServer(value)
-		case RouterTypeProxy:
-			err = s.proxyServer(value)
+			err = s.apiHandler(value)
 		case RouterTypeGroup:
-			err = s.apiGroupServer(value)
+			err = s.apiGroupHandler(value)
 		default:
 			err = fmt.Errorf("unknown router type:%s", rType)
 		}
